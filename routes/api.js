@@ -26,31 +26,53 @@ module.exports = function (app) {
       return false;
     }
   }
-  const sendErr = (msg) => {
-    return res.json({ error: msg });
+  const createErr = msg => {
+    return { error: msg };
   }
   
   app.route('/api/check')
     .post((req, res) => {
+      const sendErr = msg => res.json(createErr(msg));
       const checkedInput = validateCheckInput(req.body);
       if (checkedInput.includes(null)) {
         sendErr('Required field(s) missing');
         return;
       } 
+
       const [puzzle, coordinate, value] = [...checkedInput];
       if (!coordinate) {
-        
+        sendErr('Invalid coordinate');
+        return;
+      } else if (!value) {
+        sendErr('Invalid value');
+        return;
       }
+
       const puzzleInvalid = validateTranslator(solver.validate(puzzle));
       if (puzzleInvalid) {
         sendErr(puzzleInvalid);
         return;
       }
 
+      const conflicts = solver.checkAllPlacement(puzzle, 
+        coordinate[0], coordinate[1], value);
+      const conflictTemplate = ['row', 'column', 'region'];
+      let result = {};
+      if (conflicts.includes(false)) {
+        result.valid = false;
+        result.conflict = [];
+        conflicts.forEach((x, i) => {
+          if (!x) { result.conflict.push(conflictTemplate[i]) }
+        })
+      } else {
+        result.valid = true;
+      }
+      res.json(result);
     });
     
   app.route('/api/solve')
     .post((req, res) => {
+      const sendErr = msg => res.json(createErr(msg));
       const puzzle = req.body.puzzle || null; 
       if (!req.body.puzzle) {
         sendErr('Required field missing');

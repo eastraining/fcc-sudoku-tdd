@@ -62,36 +62,44 @@ class SudokuSolver {
     return verify ? !testVals.includes(String(value)) : testVals;
   }
 
+  checkAllPlacement(puzzleString, row, column, value, verify = true) {
+    return [
+      this.checkRowPlacement(...arguments),
+      this.checkColPlacement(...arguments),
+      this.checkRegionPlacement(...arguments)
+    ];
+  }
+
   solve(puzzleString) {
     let valid = this.validate(puzzleString);
     if (valid.includes(false)) {
       return valid;
     }
-    
-    // need to use arrow function here up to initial Class method
-    // in order to preserve Class context as "this"
-    // to access other Class methods
-    const checkNum = (puzzleString, row, column, value, verify = true) => {
-      const args = [puzzleString, row, column, value, verify];
-      return [
-        this.checkRowPlacement(...args),
-        this.checkColPlacement(...args),
-        this.checkRegionPlacement(...args)
-      ];
+
+    const isPuzzleSolvable = puzzleString => {
+      for (let idx = 0, n = puzzleString.length; idx < n; idx++) {
+        let char = puzzleString[idx];
+        if (char === '.') {
+          continue;
+        }
+        const rowIdx = Math.floor(idx / this.GRID_SIDE);
+        const colIdx = idx % this.GRID_SIDE;
+        let result = this.checkAllPlacement(puzzleString, rowIdx, colIdx, char);
+        if (result.includes(false)) {
+          return false;
+        } 
+      }
+      return puzzleString;
+    }
+    const isPuzzleSolved = puzzleString => {
+      return /^\d{81}$/.test(isPuzzleSolvable(puzzleString)) && puzzleString;
     }
 
     if (/^\d+$/.test(puzzleString)) {
-      for (let idx = 0, n = puzzleString.length; idx < n; idx++) {
-        let char = puzzleString[idx];
-        const rowIdx = Math.floor(idx / this.GRID_SIDE);
-        const colIdx = idx % this.GRID_SIDE;
-        let result = checkNum(puzzleString, rowIdx, colIdx, char);
-        if (result.includes(false)) {
-          return false;
-        }
-      }
-      return puzzleString;
+      return isPuzzleSolved(puzzleString);
     } else {
+      if (!isPuzzleSolvable(puzzleString)) { return false; }
+
       // structure of each missing number shall be:
       // [ idx, [ possible numbers for the cell at that index... ] ] 
       let missingNums = [];
@@ -112,7 +120,7 @@ class SudokuSolver {
           let currCell = [idx, []];
           const rowIdx = Math.floor(idx / 9);
           const colIdx = idx % 9;
-          const result = checkNum(solvedString, rowIdx, colIdx, char, false).join('');
+          const result = this.checkAllPlacement(solvedString, rowIdx, colIdx, char, false).join('');
           for (let j = 1, m = 9; j <= m; j++) {
             if(!result.includes(String(j))) {
               currCell[1].push(String(j));
@@ -139,7 +147,7 @@ class SudokuSolver {
         if (missingIdx < 0) {
           return false;
         } else if (missingIdx === missingNums.length) {
-          return /^\d{81}$/.test(solvedString) ? solvedString : false;
+          return isPuzzleSolved(solvedString);
         } else {
           const currCell = missingNums[missingIdx];
           const puzzleIdx = currCell[0];
@@ -150,7 +158,7 @@ class SudokuSolver {
           const tryNumStartIdx = tryNums.indexOf(puzzleVal) + 1;
           for (let i = tryNumStartIdx, n = tryNums.length; i < n; i++) {
             let tryNum = tryNums[i];
-            let result = checkNum(solvedString, rowIdx, colIdx, tryNum);
+            let result = this.checkAllPlacement(solvedString, rowIdx, colIdx, tryNum);
             if (result.includes(false)) {
               continue;
             } else {

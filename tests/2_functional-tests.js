@@ -223,6 +223,6 @@ suite('Functional Tests', () => {
         done();
       });
     });
-  })
+  });
 });
 
