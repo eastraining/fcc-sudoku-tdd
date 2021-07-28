@@ -72,7 +72,9 @@ class SudokuSolver {
       return valid;
     }
     
-    
+    // need to use arrow function here up to initial Class method
+    // in order to preserve Class context as "this"
+    // to access other Class methods
     const checkNum = (puzzleString, row, column, value, verify = true) => {
       const args = [puzzleString, row, column, value, verify];
       return [
@@ -105,6 +107,8 @@ class SudokuSolver {
         .concat(solvedString.slice(idx + 1));
       }
       
+      // create restraints on possible values
+      // and fill in trivial answers at the same time
       for (let idx = 0, n = puzzleString.length; idx < n; idx++) {
         let char = puzzleString[idx];
         if (char !== '.') {
@@ -130,10 +134,13 @@ class SudokuSolver {
         }
       };
 
+      // sort missingNums so can start trial and error with
+      // cells that have the tightest constraints
       missingNums.sort((x, y) => {
         return x[1].length - y[1].length; 
       });
 
+      // recursive function for trial and error and backtracking
       const checkCell = (missingIdx = 0) => { 
         console.log(missingIdx);
         if (missingIdx < 0) {
