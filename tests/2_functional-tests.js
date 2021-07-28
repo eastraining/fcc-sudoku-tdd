@@ -10,6 +10,8 @@ const VALID_SOLVED_PUZZLE = puzzlesAndSolutions[0][1];
 const INVALID_CHAR_PUZZLE = VALID_UNSOLVED_PUZZLE.slice(0, 80).concat('z');
 const INVALID_LEN_PUZZLE = VALID_UNSOLVED_PUZZLE.slice(0, 80);
 const INVALID_SOL_PUZZLE = VALID_UNSOLVED_PUZZLE.slice(0, 79).concat('77');
+const VALID_UNSOLVED_PUZZLE_2 = '....3.68...259873....7.......3.2.5..6..9......54....9.7...4...18..2....3345.7....';
+const VALID_SOLVED_PUZZLE_2 = '479132685162598734538764219913427568687915342254683197726349851891256473345871926';
 
 
 chai.use(chaiHttp);
@@ -20,13 +22,13 @@ suite('Functional Tests', () => {
     test('Solve a puzzle with valid puzzle string', function(done) {
       chai.request(server)
       .post('/api/solve')
-      .send({ puzzle: VALID_UNSOLVED_PUZZLE })
+      .send({ puzzle: VALID_UNSOLVED_PUZZLE_2 })
       .end(function(err, res) {
         assert.equal(res.status, 200, 'server response is 200');
         expect(res).to.have.a.property('type').that.equals('application/json');
         expect(res).to.have.a.property('body').that.is.an('object');
         expect(res.body).to.have.a.property('solution').that.is.a('string').that
-        .equals(VALID_SOLVED_PUZZLE);
+        .equals(VALID_SOLVED_PUZZLE_2);
         done();
       });
     });

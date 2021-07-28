@@ -97,81 +97,118 @@ class SudokuSolver {
 
     if (/^\d+$/.test(puzzleString)) {
       return isPuzzleSolved(puzzleString);
+    } else if (!isPuzzleSolvable(puzzleString)) {
+      return false; 
     } else {
-      if (!isPuzzleSolvable(puzzleString)) { return false; }
-
-      // structure of each missing number shall be:
-      // [ idx, [ possible numbers for the cell at that index... ] ] 
-      let missingNums = [];
-      
-      let solvedString = puzzleString.slice();
-      function updateSolved(idx, char) {
-        solvedString = solvedString.slice(0, idx).concat(char)
+      // helper function to update a solvedString
+      function updateSolved(solvedString, idx, char) {
+        return solvedString = solvedString.slice(0, idx).concat(char)
         .concat(solvedString.slice(idx + 1));
       }
-      
-      // create restraints on possible values
-      // and fill in trivial answers at the same time
-      for (let idx = 0, n = puzzleString.length; idx < n; idx++) {
-        let char = puzzleString[idx];
-        if (char !== '.') {
-          continue;
-        } else {
-          let currCell = [idx, []];
-          const rowIdx = Math.floor(idx / 9);
-          const colIdx = idx % 9;
-          const result = this.checkAllPlacement(solvedString, rowIdx, colIdx, char, false).join('');
-          for (let j = 1, m = 9; j <= m; j++) {
-            if(!result.includes(String(j))) {
-              currCell[1].push(String(j));
-            }
-          }
-          if (currCell[1].length === 0) {
-            return false;
-          } else if (currCell[1].length === 1) {
-            updateSolved(idx, currCell[1][0]);
+
+      const findMissingNums = (puzzleString) => {
+        // structure of each missing number shall be:
+        // [ idx, [ possible numbers for the cell at that index... ] ] 
+        let missingNums = [];
+
+        // use a solvedString to define and update the constraint space
+        let solvedString = puzzleString.slice();
+
+        // create constraints on possible values
+        // and fill in trivial answers at the same time
+        for (let idx = 0, n = puzzleString.length; idx < n; idx++) {
+          let char = puzzleString[idx];
+          if (char !== '.') {
+            continue;
           } else {
-            missingNums.push(currCell);
-          }
-        }
-      };
-
-      // sort missingNums so can start trial and error with
-      // cells that have the tightest constraints
-      missingNums.sort((x, y) => {
-        return x[1].length - y[1].length; 
-      });
-
-      // recursive function for trial and error and backtracking
-      const checkCell = (missingIdx = 0) => { 
-        if (missingIdx < 0) {
-          return false;
-        } else if (missingIdx === missingNums.length) {
-          return isPuzzleSolved(solvedString);
-        } else {
-          const currCell = missingNums[missingIdx];
-          const puzzleIdx = currCell[0];
-          const rowIdx = Math.floor(puzzleIdx / this.GRID_SIDE);
-          const colIdx = puzzleIdx % this.GRID_SIDE;
-          const tryNums = currCell[1];
-          const puzzleVal = solvedString[puzzleIdx];
-          const tryNumStartIdx = tryNums.indexOf(puzzleVal) + 1;
-          for (let i = tryNumStartIdx, n = tryNums.length; i < n; i++) {
-            let tryNum = tryNums[i];
-            let result = this.checkAllPlacement(solvedString, rowIdx, colIdx, tryNum);
-            if (result.includes(false)) {
-              continue;
+            let currCell = [idx, []];
+            const rowIdx = Math.floor(idx / 9);
+            const colIdx = idx % 9;
+            const result = this.checkAllPlacement(solvedString, rowIdx, colIdx, char, false).join('');
+            for (let j = 1, m = 9; j <= m; j++) {
+              if(!result.includes(String(j))) {
+                currCell[1].push(String(j));
+              }
+            }
+            if (currCell[1].length === 0) {
+              return false;
+            } else if (currCell[1].length === 1) {
+              solvedString = updateSolved(solvedString, idx, currCell[1][0]);
             } else {
-              updateSolved(puzzleIdx, tryNum);
-              return checkCell(missingIdx + 1);
+              missingNums.push(currCell);
             }
           }
-          updateSolved(puzzleIdx, '.');
-          return checkCell(missingIdx - 1);
+        };
+
+        if (missingNums.length === 0) {
+          return isPuzzleSolved(solvedString) && solvedString;
+        } else {
+          // sort missingNums so can start trial and error with
+          // cells that have the tightest constraints
+          missingNums.sort((x, y) => {
+            return x[1].length - y[1].length; 
+          });
+          return [solvedString, missingNums];
         }
       }
 
-      return checkCell(0);
+      // recursive function for trial and error and backtracking
+      const checkCell = (solvedString, missingNums, missingTracker) => { 
+        if (missingTracker < 0) {
+          return false;
+        } 
+        const currCell = missingNums[0];
+        const puzzleIdx = currCell[0];
+        const rowIdx = Math.floor(puzzleIdx / this.GRID_SIDE);
+        const colIdx = puzzleIdx % this.GRID_SIDE;
+        const tryNums = currCell[1];
+        const puzzleVal = solvedString[puzzleIdx];
+        const tryNumStartIdx = tryNums.indexOf(puzzleVal) + 1;
+        for (let i = tryNumStartIdx, n = tryNums.length; i < n; i++) {
+          let tryNum = tryNums[i];
+          let result = this.checkAllPlacement(solvedString, rowIdx, colIdx, tryNum);
+          if (result.includes(false)) {
+            continue;
+          } else {
+            const newSolvedString = updateSolved(solvedString, puzzleIdx, tryNum);
+            if (/^\d{81}$/.test(newSolvedString)) {
+              return isPuzzleSolved(newSolvedString) && newSolvedString;
+            } else {
+              const newSet = findMissingNums(newSolvedString);
+              if (newSet) {
+                if (typeof newSet === 'string') {
+                  return isPuzzleSolved(newSet) && newSet;
+                } else {
+                  return [...newSet, missingTracker + 1];
+                }
+              } else {
+                continue;
+              }
+            }
+            
+          }
+        }
+        let prevMissingTracker = missingTracker - 1;
+        let prevCell = initMissingNums[prevMissingTracker];
+        const prevPuzzleIdx = prevCell[0];
+        const prevWrongVal = solvedString[prevPuzzleIdx];
+        prevCell[1] = prevCell[1].filter(x => x > prevWrongVal);
+        solvedString = updateSolved(solvedString, prevPuzzleIdx, '.');
+        let prevMissingNums = missingNums.slice();
+        prevMissingNums.unshift(prevCell);
+        return [solvedString, prevMissingNums, missingTracker - 1];
+      }
+
+      // create solvedString and initMissingNums
+      let result = findMissingNums(puzzleString);
+      const initMissingNums = result[1].slice()
+
+      while (!isPuzzleSolved(result[0])) {
+        result = checkCell(...result, 0);
+        if (!Array.isArray(result)) {
+          return result;
+        } 
+      }
     }
   }
 }
