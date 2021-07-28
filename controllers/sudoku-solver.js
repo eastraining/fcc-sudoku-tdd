@@ -46,7 +46,8 @@ class SudokuSolver {
   checkRegionPlacement(puzzleString, row, column, value, verify = true) {
     const rowIdx = this.rowToIdx(row);
     const colIdx = this.colToIdx(column);
-    const startRow = Math.floor(rowIdx / this.REGION_SIDE) * this.REGION_SIDE;
+    const startRow = Math.floor(rowIdx / this.REGION_SIDE) * this.REGION_SIDE 
+    * this.GRID_SIDE;
     const startCol = Math.floor(colIdx / this.REGION_SIDE) * this.REGION_SIDE;
     const rowOfVal = rowIdx * this.GRID_SIDE;
     const valPosition = rowOfVal + colIdx;
@@ -58,17 +59,12 @@ class SudokuSolver {
         testVals.concat(puzzleString.charAt(currIdx));
       }
     }
-    if (testVals.length > 8) {
-      console.log(testVals, startRow, startCol, row, rowIdx, column, colIdx, value);
-    }
     return verify ? !testVals.includes(String(value)) : testVals;
   }
 
   solve(puzzleString) {
-    console.log(puzzleString);
     let valid = this.validate(puzzleString);
     if (valid.includes(false)) {
-      console.log(puzzleString, valid);
       return valid;
     }
     
@@ -85,11 +81,10 @@ class SudokuSolver {
     }
 
     if (/^\d+$/.test(puzzleString)) {
-      console.log(puzzleString);
       for (let idx = 0, n = puzzleString.length; idx < n; idx++) {
         let char = puzzleString[idx];
-        const rowIdx = Math.floor(idx / 9);
-        const colIdx = idx % 9;
+        const rowIdx = Math.floor(idx / this.GRID_SIDE);
+        const colIdx = idx % this.GRID_SIDE;
         let result = checkNum(puzzleString, rowIdx, colIdx, char);
         if (result.includes(false)) {
           return false;
@@ -124,7 +119,6 @@ class SudokuSolver {
             }
           }
           if (currCell[1].length === 0) {
-            console.log(currCell, currCell[1], result);
             return false;
           } else if (currCell[1].length === 1) {
             updateSolved(idx, currCell[1][0]);
@@ -142,17 +136,15 @@ class SudokuSolver {
 
       // recursive function for trial and error and backtracking
       const checkCell = (missingIdx = 0) => { 
-        console.log(missingIdx);
         if (missingIdx < 0) {
           return false;
         } else if (missingIdx === missingNums.length) {
-          console.log(missingIdx, solvedString);
           return /^\d{81}$/.test(solvedString) ? solvedString : false;
         } else {
           const currCell = missingNums[missingIdx];
           const puzzleIdx = currCell[0];
-          const rowIdx = Math.floor(puzzleIdx / GRID_SIDE);
-          const colIdx = puzzleIdx % GRID_SIDE;
+          const rowIdx = Math.floor(puzzleIdx / this.GRID_SIDE);
+          const colIdx = puzzleIdx % this.GRID_SIDE;
           const tryNums = currCell[1];
           const puzzleVal = solvedString[puzzleIdx];
           const tryNumStartIdx = tryNums.indexOf(puzzleVal) + 1;
